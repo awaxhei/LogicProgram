@@ -3,77 +3,150 @@
 <head>
     <title>数独生成器</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+        .sudoku-container {
+            margin: 20px 0;
         }
-        .form-group {
-            margin-bottom: 20px;
+        .sudoku-grid {
+            border-collapse: collapse;
+            margin: 10px 0;
         }
-        label {
-            display: block;
-            margin-bottom: 5px;
+        .sudoku-grid td {
+            border: 1px solid #000;
+            width: 40px;
+            height: 40px;
+            text-align: center;
+            position: relative;
         }
-        input[type="number"] {
-            padding: 8px;
-            width: 100px;
-        }
-        button {
-            padding: 8px 16px;
-            background-color: #4CAF50;
-            color: white;
+        .sudoku-grid input {
+            width: 100%;
+            height: 100%;
             border: none;
-            cursor: pointer;
+            text-align: center;
+            font-size: 16px;
         }
-        button:hover {
-            background-color: #45a049;
+        .box-border-right {
+            border-right: 2px solid #000 !important;
+        }
+        .box-border-bottom {
+            border-bottom: 2px solid #000 !important;
+        }
+        .fixed-number {
+            font-weight: bold;
+            color: #000;
         }
         .error {
             color: red;
             margin: 10px 0;
         }
-        .sudoku {
-            font-family: monospace;
-            white-space: pre;
-            margin: 20px 0;
-            line-height: 1.2;
+        .solution {
+            margin-top: 20px;
         }
-        .section {
-            margin-bottom: 30px;
+        .correct {
+            background-color: #ddffdd;
+        }
+        .incorrect {
+            background-color: #ffdddd;
+        }
+        .validation-result {
+            margin: 10px 0;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .success {
+            color: green;
+        }
+        .failure {
+            color: red;
         }
     </style>
 </head>
 <body>
     <h1>数独生成器</h1>
-    
-    <div class="form-group">
-        <form method="POST">
-            <label for="n">输入数独阶数 (n必须是完全平方数，如4, 9, 16等):</label>
-            <input type="number" id="n" name="n" min="4" step="1" required>
-            <button type="submit">生成数独</button>
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+    <form method="POST">
+        <label for="n">输入数独阶数 (必须是完全平方数，如4,9,16):</label>
+        <input type="number" id="n" name="n" min="1" required>
+        <button type="submit">生成数独</button>
+    </form>
+
+    {% if puzzle %}
+    <div class="sudoku-container">
+        <h2>{{ n }}阶数独题目</h2>
+        <form id="sudoku-form">
+            <table class="sudoku-grid">
+                {% for i in range(n) %}
+                <tr>
+                    {% for j in range(n) %}
+                    {% set box_size = (n ** 0.5)|int %}
+                    <td class="{% if (j+1) % box_size == 0 %}box-border-right{% endif %} {% if (i+1) % box_size == 0 %}box-border-bottom{% endif %}">
+                        {% if puzzle[i][j] != '0' %}
+                        <div class="fixed-number">{{ puzzle[i][j] }}</div>
+                        {% else %}
+                        <input type="number" min="1" max="{{ n }}" data-row="{{ i }}" data-col="{{ j }}">
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </table>
+            <button type="button" onclick="checkSolution()">验证答案</button>
+            <div id="validation-result"></div>
         </form>
     </div>
 
-    {% if error %}
-    <div class="error">
-        {{ error }}
-    </div>
-    {% endif %}
-
-    {% if puzzle %}
-    <div class="section">
-        <h2>数独题目 (n={{ n }})</h2>
-        <div class="sudoku">{{ puzzle }}</div>
-    </div>
-    {% endif %}
-
-    {% if solution %}
-    <div class="section">
+    <div class="solution">
         <h2>数独的解</h2>
-        <div class="sudoku">{{ solution }}</div>
+        <table class="sudoku-grid">
+            {% for row in solution %}
+            <tr>
+                {% for cell in row %}
+                {% set box_size = (n ** 0.5)|int %}
+                <td class="{% if (loop.index) % box_size == 0 %}box-border-right{% endif %} {% if (loop.index0 // n +1) % box_size == 0 %}box-border-bottom{% endif %}">
+                    {{ cell }}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </table>
     </div>
     {% endif %}
+
+    <script>
+        function checkSolution() {
+            const inputs = document.querySelectorAll('#sudoku-form input');
+            const resultDiv = document.getElementById('validation-result');
+            let allCorrect = true;
+            
+            // 清除之前的验证结果和样式
+            resultDiv.innerHTML = '';
+            inputs.forEach(input => {
+                input.classList.remove('correct', 'incorrect');
+            });
+
+            // 检查每个输入框
+            inputs.forEach(input => {
+                const row = parseInt(input.dataset.row);
+                const col = parseInt(input.dataset.col);
+                const userValue = input.value;
+                const correctValue = '{{ solution[row][col] }}';
+                
+                if (userValue === correctValue) {
+                    input.classList.add('correct');
+                } else {
+                    input.classList.add('incorrect');
+                    allCorrect = false;
+                }
+            });
+
+            // 显示验证结果
+            if (allCorrect) {
+                resultDiv.innerHTML = '<span class="success">恭喜！全部答案正确！</span>';
+            } else {
+                resultDiv.innerHTML = '<span class="failure">有错误，请检查标红的格子</span>';
+            }
+        }
+    </script>
 </body>
 </html>

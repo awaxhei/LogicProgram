@@ -1,25 +1,7 @@
 from z3 import *
 import sys
 import random
-
-def format_sudoku(grid, box_size):
-    """格式化输出数独"""
-    n = len(grid)
-    result = []
-    for i in range(n):
-        if i % box_size == 0:
-            result.append("+" + ("-" * (box_size * 2 + 1) + "+") * box_size)
-        
-        row = []
-        for j in range(n):
-            if j % box_size == 0:
-                row.append("|")
-            row.append(f" {grid[i][j] if grid[i][j] != 0 else '.'} ")
-        row.append("|")
-        result.append("".join(row))
-    
-    result.append("+" + ("-" * (box_size * 2 + 1) + "+") * box_size)
-    return "\n".join(result)
+import json
 
 def generate_sudoku(n, max_retries=10, retry_count=0):
     """
@@ -104,25 +86,25 @@ def generate_sudoku(n, max_retries=10, retry_count=0):
         return puzzle, solution
         
     except ImportError:
-        print("错误: 未安装z3-solver库，请先运行 'pip install z3-solver'")
+        print(json.dumps({"error": "未安装z3-solver库，请先运行 'pip install z3-solver'"}))
         sys.exit(1)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("用法: python test.py n")
-        print("示例: python test.py 9")
+        print(json.dumps({"error": "用法: python test.py n", "example": "python test.py 9"}))
         sys.exit(1)
     
     try:
         n = int(sys.argv[1])
         puzzle, solution = generate_sudoku(n)
         
-        box_size = int(n ** 0.5)
-        print("生成的数独题目:")
-        print(format_sudoku(puzzle, box_size))
-        print("\n数独的解:")
-        print(format_sudoku(solution, box_size))
+        result = {
+            "n": n,
+            "puzzle": puzzle,
+            "solution": solution
+        }
+        print(json.dumps(result))
         
     except ValueError as e:
-        print(f"错误: {e}")
+        print(json.dumps({"error": str(e)}))
         sys.exit(1)
