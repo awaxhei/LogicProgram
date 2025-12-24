@@ -3,121 +3,407 @@
 <head>
     <title>数独生成器</title>
     <style>
-        .sudoku-container {
-            margin: 20px 0;
+        /* 全局样式 */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            position: relative;
+            {% if config.background_image.enabled %}
+            background-image: url('{{ config.background_image.path }}');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            {% endif %}
         }
+
+        /* 白色蒙版 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            {% if config.background_image.enabled and config.background_image.overlay.enabled %}
+            background-color: {{ config.background_image.overlay.color }};
+            opacity: {{ config.background_image.overlay.opacity }};
+            {% else %}
+            background-color: white;
+            opacity: 0.8;
+            {% endif %}
+            z-index: -1;
+        }
+
+        /* 主要内容容器 */
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 标题样式 */
+        h1 {
+            text-align: center;
+            color: {{ config.theme.primary_color }};
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: {{ config.theme.accent_color }};
+            border-bottom: 2px solid {{ config.theme.primary_color }};
+            padding-bottom: 10px;
+        }
+
+        /* 表单样式 */
+        form {
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: {{ config.theme.text_color }};
+            font-weight: bold;
+        }
+
+        input[type="number"] {
+            padding: 10px;
+            border: 2px solid {{ config.theme.primary_color }};
+            border-radius: 5px;
+            font-size: 16px;
+            margin-right: 10px;
+            width: 200px;
+        }
+
+        button {
+            background-color: {{ config.theme.primary_color }};
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background-color: {{ config.theme.accent_color }};
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 数独容器 */
+        .sudoku-container {
+            margin: 30px 0;
+            text-align: center;
+        }
+
         .sudoku-grid {
             border-collapse: collapse;
-            margin: 10px 0;
+            margin: 20px auto;
+            border: 3px solid {{ config.theme.primary_color }};
+            background-color: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
+
         .sudoku-grid td {
-            border: 1px solid #000;
-            width: 40px;
-            height: 40px;
+            border: 1px solid #ccc;
+            width: 45px;
+            height: 45px;
             text-align: center;
             position: relative;
+            transition: all 0.3s ease;
         }
+
         .sudoku-grid input {
             width: 100%;
             height: 100%;
             border: none;
             text-align: center;
-            font-size: 16px;
+            font-size: 18px;
+            font-weight: bold;
+            background: transparent;
+            transition: all 0.3s ease;
         }
+
+        /* 待填格子的动画效果 */
+        .sudoku-grid input:focus {
+            outline: none;
+            background-color: rgba(30, 136, 229, 0.1);
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(30, 136, 229, 0.3);
+        }
+
+        /* 格子动画效果 */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .animated-cell {
+            animation: pulse 0.3s ease;
+        }
+
         .box-border-right {
-            border-right: 2px solid #000 !important;
+            border-right: 3px solid {{ config.theme.primary_color }} !important;
         }
+
         .box-border-bottom {
-            border-bottom: 2px solid #000 !important;
+            border-bottom: 3px solid {{ config.theme.primary_color }} !important;
         }
+
         .fixed-number {
             font-weight: bold;
-            color: #000;
+            color: {{ config.theme.text_color }};
+            font-size: 18px;
+            line-height: 45px;
         }
+
+        /* 错误和消息样式 */
         .error {
-            color: red;
-            margin: 10px 0;
+            color: {{ config.theme.error_color }};
+            background-color: rgba(244, 67, 54, 0.1);
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid {{ config.theme.error_color }};
         }
+
         .solution {
-            margin-top: 20px;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid {{ config.theme.secondary_color }};
         }
+
         .correct {
-            background-color: #ddffdd;
+            background-color: rgba(76, 175, 80, 0.2) !important;
         }
+
         .incorrect {
-            background-color: #ffdddd;
+            background-color: rgba(244, 67, 54, 0.2) !important;
         }
+
         .validation-result {
-            margin: 10px 0;
+            margin: 20px 0;
             font-weight: bold;
             font-size: 18px;
+            padding: 15px;
+            border-radius: 5px;
         }
+
         .success {
-            color: green;
+            color: {{ config.theme.success_color }};
+            background-color: rgba(76, 175, 80, 0.1);
+            border-left: 4px solid {{ config.theme.success_color }};
         }
+
         .failure {
-            color: red;
+            color: {{ config.theme.error_color }};
+            background-color: rgba(244, 67, 54, 0.1);
+            border-left: 4px solid {{ config.theme.error_color }};
+        }
+
+        /* 答案显示/隐藏样式 */
+        .solution.hidden {
+            display: none;
+        }
+
+        .show-answer-btn {
+            background-color: {{ config.theme.accent_color }};
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+            transition: all 0.3s ease;
+        }
+
+        .show-answer-btn:hover {
+            background-color: {{ config.theme.primary_color }};
+            transform: translateY(-2px);
+        }
+
+        /* 弹出消息样式 */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .toast {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            border-left: 4px solid {{ config.theme.primary_color }};
+            transform: translateX(100%);
+            transition: transform 0.5s ease;
+            max-width: 300px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            border-left-color: {{ config.theme.success_color }};
+        }
+
+        .toast.error {
+            border-left-color: {{ config.theme.error_color }};
+        }
+
+        /* 标题旋转图片样式 */
+        .title-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .title-spinner {
+            width: {{ config.title_spinner.size }};
+            height: {{ config.title_spinner.size }};
+            animation: spin {{ config.title_spinner.rotation_speed }} linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <h1>数独生成器</h1>
-    {% if error %}
-        <div class="error">{{ error }}</div>
-    {% endif %}
-    <form method="POST">
-        <label for="n">输入数独阶数 (必须是完全平方数，如4,9,16):</label>
-        <input type="number" id="n" name="n" min="1" required>
-        <button type="submit">生成数独</button>
-    </form>
+    <div class="container">
+        <div class="title-container">
+            {% if config.title_spinner.enabled %}
+            <img src="{{ config.title_spinner.path }}" alt="旋转图标" class="title-spinner">
+            {% endif %}
+            <h1>数独生成器</h1>
+        </div>
+        
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+        
+        <form method="POST">
+            <label for="n">输入数独阶数 (必须是完全平方数，如4,9,16):</label>
+            <input type="number" id="n" name="n" min="1" required>
+            <button type="submit">生成数独</button>
+        </form>
 
-    {% if puzzle %}
-    <div class="sudoku-container">
-        <h2>{{ n }}阶数独题目</h2>
-        <form id="sudoku-form">
+        {% if puzzle %}
+        <div class="sudoku-container">
+            <h2>{{ n }}阶数独题目</h2>
+            <form id="sudoku-form">
+                <table class="sudoku-grid">
+                    {% for i in range(n) %}
+                    <tr>
+                        {% for j in range(n) %}
+                        {% set box_size = (n ** 0.5)|int %}
+                        <td class="{% if (j+1) % box_size == 0 %}box-border-right{% endif %} {% if (i+1) % box_size == 0 %}box-border-bottom{% endif %}">
+                            {% if puzzle[i][j] != '0' %}
+                            <div class="fixed-number">{{ puzzle[i][j] }}</div>
+                            {% else %}
+                            <input type="number" min="1" max="{{ n }}" data-row="{{ i }}" data-col="{{ j }}" class="sudoku-input">
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </table>
+                <div style="margin-top: 20px;">
+                    <button type="button" onclick="checkSolution()">验证答案</button>
+                    <button type="button" onclick="getHint()" style="margin-left: 10px; background-color: #4caf50;">提示</button>
+                    <button type="button" onclick="refreshSudoku()" style="margin-left: 10px; background-color: #ff9800;">刷新</button>
+                    <button type="button" class="show-answer-btn" onclick="toggleSolution()">显示答案</button>
+                </div>
+                <div id="validation-result"></div>
+                <div id="hint-result" style="margin-top: 20px;"></div>
+            </form>
+        </div>
+
+        <div class="solution hidden" id="solution-section">
+            <h2>数独的解</h2>
             <table class="sudoku-grid">
-                {% for i in range(n) %}
+                {% for row in solution %}
                 <tr>
-                    {% for j in range(n) %}
+                    {% for cell in row %}
                     {% set box_size = (n ** 0.5)|int %}
-                    <td class="{% if (j+1) % box_size == 0 %}box-border-right{% endif %} {% if (i+1) % box_size == 0 %}box-border-bottom{% endif %}">
-                        {% if puzzle[i][j] != '0' %}
-                        <div class="fixed-number">{{ puzzle[i][j] }}</div>
-                        {% else %}
-                        <input type="number" min="1" max="{{ n }}" data-row="{{ i }}" data-col="{{ j }}">
-                        {% endif %}
+                    <td class="{% if (loop.index) % box_size == 0 %}box-border-right{% endif %} {% if (loop.index0 // n +1) % box_size == 0 %}box-border-bottom{% endif %}">
+                        {{ cell }}
                     </td>
                     {% endfor %}
                 </tr>
                 {% endfor %}
             </table>
-            <button type="button" onclick="checkSolution()">验证答案</button>
-            <div id="validation-result"></div>
-        </form>
+        </div>
+        {% endif %}
     </div>
 
-    <div class="solution">
-        <h2>数独的解</h2>
-        <table class="sudoku-grid">
-            {% for row in solution %}
-            <tr>
-                {% for cell in row %}
-                {% set box_size = (n ** 0.5)|int %}
-                <td class="{% if (loop.index) % box_size == 0 %}box-border-right{% endif %} {% if (loop.index0 // n +1) % box_size == 0 %}box-border-bottom{% endif %}">
-                    {{ cell }}
-                </td>
-                {% endfor %}
-            </tr>
-            {% endfor %}
-        </table>
-    </div>
-    {% endif %}
+    <!-- 弹出消息容器 -->
+    <div class="toast-container" id="toast-container"></div>
 
+    {% if puzzle %}
     <script>
+        // 将解决方案数据传递给JavaScript
+        const solutionData = {{ solution|tojson }};
+        
+        // 弹出消息函数
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = message;
+            
+            container.appendChild(toast);
+            
+            // 显示动画
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100);
+            
+            // 自动隐藏
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    container.removeChild(toast);
+                }, 500);
+            }, 3000);
+        }
+        
+        // 添加输入框动画效果
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('.sudoku-input');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.classList.add('animated-cell');
+                });
+                
+                input.addEventListener('blur', function() {
+                    this.classList.remove('animated-cell');
+                });
+            });
+        });
+        
         function checkSolution() {
             const inputs = document.querySelectorAll('#sudoku-form input');
             const resultDiv = document.getElementById('validation-result');
-            let allCorrect = true;
             
             // 清除之前的验证结果和样式
             resultDiv.innerHTML = '';
@@ -125,28 +411,190 @@
                 input.classList.remove('correct', 'incorrect');
             });
 
+            // 检查是否所有格子都已填写
+            let allFilled = true;
+            inputs.forEach(input => {
+                if (!input.value.trim()) {
+                    allFilled = false;
+                }
+            });
+
+            if (!allFilled) {
+                resultDiv.innerHTML = '<span class="failure">没有全部填充</span>';
+                showToast('没有全部填充', 'error');
+                return;
+            }
+
             // 检查每个输入框
+            let allCorrect = true;
             inputs.forEach(input => {
                 const row = parseInt(input.dataset.row);
                 const col = parseInt(input.dataset.col);
                 const userValue = input.value;
-                const correctValue = '{{ solution[row][col] }}';
+                const correctValue = solutionData[row][col].toString();
                 
-                if (userValue === correctValue) {
-                    input.classList.add('correct');
-                } else {
-                    input.classList.add('incorrect');
+                if (userValue !== correctValue) {
                     allCorrect = false;
                 }
             });
 
             // 显示验证结果
             if (allCorrect) {
-                resultDiv.innerHTML = '<span class="success">恭喜！全部答案正确！</span>';
+                resultDiv.innerHTML = '<span class="success">正确</span>';
+                showToast('正确', 'success');
             } else {
-                resultDiv.innerHTML = '<span class="failure">有错误，请检查标红的格子</span>';
+                resultDiv.innerHTML = '<span class="failure">错误</span>';
+                showToast('错误', 'error');
             }
         }
+        
+        function toggleSolution() {
+            const solutionSection = document.getElementById('solution-section');
+            const button = document.querySelector('.show-answer-btn');
+            
+            if (solutionSection.classList.contains('hidden')) {
+                // 显示答案
+                solutionSection.classList.remove('hidden');
+                button.textContent = '隐藏答案';
+                showToast('答案已显示', 'success');
+            } else {
+                // 隐藏答案
+                solutionSection.classList.add('hidden');
+                button.textContent = '显示答案';
+                showToast('答案已隐藏', 'info');
+            }
+        }
+        
+        function getHint() {
+            // 收集当前数独状态
+            const inputs = document.querySelectorAll('.sudoku-input');
+            const n = {{ n }};
+            const currentState = [];
+            
+            // 构建当前数独状态
+            for (let i = 0; i < n; i++) {
+                currentState[i] = [];
+                for (let j = 0; j < n; j++) {
+                    const input = document.querySelector(`input[data-row="${i}"][data-col="${j}"]`);
+                    if (input) {
+                        currentState[i][j] = input.value || '0';
+                    } else {
+                        // 如果是固定数字，从固定数字元素获取
+                        const row = document.querySelector(`tr:nth-child(${i+1})`);
+                        if (row) {
+                            const cell = row.querySelector(`td:nth-child(${j+1})`);
+                            if (cell) {
+                                const fixedNumber = cell.querySelector('div.fixed-number');
+                                currentState[i][j] = fixedNumber ? fixedNumber.textContent : '0';
+                            } else {
+                                currentState[i][j] = '0';
+                            }
+                        } else {
+                            currentState[i][j] = '0';
+                        }
+                    }
+                }
+            }
+            
+            // 显示加载状态
+            const hintResult = document.getElementById('hint-result');
+            hintResult.innerHTML = '<div class="success">正在获取AI提示...</div>';
+            
+            // 发送提示请求
+            fetch('/hint', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    n: n,
+                    current_state: currentState
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    hintResult.innerHTML = `
+                        <div class="success">
+                            <h3>AI提示：</h3>
+                            <p style="white-space: pre-wrap;">${data.hint}</p>
+                        </div>
+                    `;
+                    showToast('AI提示已生成', 'success');
+                } else {
+                    hintResult.innerHTML = `<div class="failure">${data.error}</div>`;
+                    showToast('获取提示失败: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('提示错误:', error);
+                hintResult.innerHTML = '<div class="failure">获取提示失败，请重试</div>';
+                showToast('获取提示失败，请重试', 'error');
+            });
+        }
+        
+        function refreshSudoku() {
+            // 收集当前数独数据
+            const inputs = document.querySelectorAll('.sudoku-input');
+            const puzzle = [];
+            const n = {{ n }};
+            
+            // 构建当前数独状态
+            for (let i = 0; i < n; i++) {
+                puzzle[i] = [];
+                for (let j = 0; j < n; j++) {
+                    const input = document.querySelector(`input[data-row="${i}"][data-col="${j}"]`);
+                    if (input) {
+                        puzzle[i][j] = input.value || '0';
+                    } else {
+                        // 如果是固定数字，从固定数字元素获取
+                        // 使用更精确的选择器：找到对应的行，然后找到该行的第j+1个单元格
+                        const row = document.querySelector(`tr:nth-child(${i+1})`);
+                        if (row) {
+                            const cell = row.querySelector(`td:nth-child(${j+1})`);
+                            if (cell) {
+                                const fixedNumber = cell.querySelector('div.fixed-number');
+                                puzzle[i][j] = fixedNumber ? fixedNumber.textContent : '0';
+                            } else {
+                                puzzle[i][j] = '0';
+                            }
+                        } else {
+                            puzzle[i][j] = '0';
+                        }
+                    }
+                }
+            }
+            
+            // 发送刷新请求
+            fetch('/refresh', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    n: n,
+                    puzzle: puzzle,
+                    solution: solutionData
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('数独已刷新，正在重新加载...', 'success');
+                    // 延迟一下让用户看到消息，然后重新加载页面
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showToast('刷新失败: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('刷新错误:', error);
+                showToast('刷新失败，请重试', 'error');
+            });
+        }
     </script>
+    {% endif %}
 </body>
 </html>
