@@ -136,11 +136,11 @@ def index():
                 if sqrt_n * sqrt_n != n:
                     raise ValueError("n必须是完全平方数")
                 else:
-                    return render_template('index.html', error=f"暂不支持 {n} 阶数独，目前仅支持 {', '.join(map(str, SUPPORTED_SIZES))} 阶")
+                    return render_template('index.html', error=f"暂不支持 {n} 阶数独，目前仅支持 {', '.join(map(str, SUPPORTED_SIZES))} 阶", config=config)
             
             # 检查缓存状态
             if cache_status[n]['initializing']:
-                return render_template('index.html', error=f"{n}阶数独初始化中，请稍后再试")
+                return render_template('index.html', error=f"{n}阶数独初始化中，请稍后再试", config=config)
             
             # 从缓存中获取数独（线程安全）
             with threading.Lock():
@@ -152,7 +152,7 @@ def index():
                         thread = threading.Thread(target=generate_sudoku_background, args=(n,))
                         thread.daemon = True
                         thread.start()
-                    return render_template('index.html', error=f"{n}阶数独生成中，请稍后再试")
+                    return render_template('index.html', error=f"{n}阶数独生成中，请稍后再试", config=config)
                 
                 # 安全地从缓存中获取数据 - 使用try-except防止竞态条件
                 try:
@@ -169,7 +169,7 @@ def index():
                                         n=n,
                                         puzzle=puzzle,
                                         solution=solution,
-                                        config=config.FRONTEND_CONFIG)
+                                        config=config)
                 except IndexError:
                     # 如果缓存为空（竞态条件发生），返回错误信息
                     if not cache_status[n]['generating']:
@@ -177,14 +177,14 @@ def index():
                         thread = threading.Thread(target=generate_sudoku_background, args=(n,))
                         thread.daemon = True
                         thread.start()
-                    return render_template('index.html', error=f"{n}阶数独生成中，请稍后再试")
+                    return render_template('index.html', error=f"{n}阶数独生成中，请稍后再试", config=config)
             
         except ValueError as e:
-            return render_template('index.html', error=str(e))
+            return render_template('index.html', error=str(e), config=config)
         except Exception as e:
-            return render_template('index.html', error=f"发生错误: {str(e)}")
+            return render_template('index.html', error=f"发生错误: {str(e)}", config=config)
     
-    return render_template('index.html', config=config.FRONTEND_CONFIG)
+    return render_template('index.html', config=config)
 
 @app.route('/refresh', methods=['POST'])
 def refresh_sudoku():
@@ -302,4 +302,4 @@ def check_cache_status():
 if __name__ == '__main__':
     # 服务器启动时立即开始预生成
     start_cache_initialization()
-    app.run(debug=True)
+    app.run(host='::', port=5000, debug=True)
