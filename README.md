@@ -165,10 +165,10 @@ SUPPORTED_SIZES = [4, 9, 16, 25]  # 添加25阶支持
    ```python
    AI_CONFIG = {
        'enabled': True,  # 启用AI提示功能
-       'api_url': 'https://api.openai.com/v1/chat/completions',  # AI API地址
+       'api_url': 'https://api.deepseek.com/v1/chat/completions',  # AI API地址
        'api_key': 'your-actual-api-key-here',  # 替换为你的真实API密钥
-       'model': 'gpt-3.5-turbo',  # 使用的模型
-       'prompt_template': '请为这个数独提供一些解题提示：\n数独阶数：{n}\n当前状态：{current_state}\n请给出具体的解题思路和下一步建议。',
+       'model': 'deepseek-chat',  # 使用的模型
+       'prompt_template': '请为这个数独提供一些解题提示：\n数独阶数：{n}\n当前状态：{current_state}\n请给出简洁的第一人称以建议的口吻的一句话的解题思路和下一步建议。',
        'max_tokens': 200
    }
    ```

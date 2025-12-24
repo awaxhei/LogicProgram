@@ -10,6 +10,12 @@ from queue import Queue
 
 app = Flask(__name__)
 
+# 创建配置字典
+config_dict = {
+    'FRONTEND_CONFIG': config.FRONTEND_CONFIG,
+    'AI_CONFIG': config.AI_CONFIG
+}
+
 # 缓存配置
 SUPPORTED_SIZES = [4, 9, 16]  # 支持的数独阶数
 CACHE_SIZE = 3  # 每个阶数缓存的数量
